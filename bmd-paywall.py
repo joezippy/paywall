@@ -3,7 +3,6 @@ import os, cgi, cgitb, json, time, datetime, requests
 
 ############################################################################
 # File: bmd-paywall.py
-# Version: 1.0.1 (beta)
 # Repository: https://github.com/joezippy/bmd-paywall
 # Requirements: Python 3.5, webserver and CGI optional
 #
