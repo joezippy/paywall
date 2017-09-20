@@ -55,9 +55,12 @@ next_pmt_ms = int(1505874716)
 
 
 #########
-# This defines the blockchain explorer that will be use to fetch the amt received by the address
+# This defines the blockchain explorer that will be use to fetch the balance by the address.
+# Funds have to be moved by the address owner, if you expect subsiquent deposits based on pmt_freq_ms
 # the JSON file address will be concatinated on the end
-expl_url = "https://explorer.dash.org/chain/Dash/q/getreceivedbyaddress/"
+expl_url = "https://explorer.dash.org/chain/Dash/q/addressbalance/"
+check_addr_url = "https://explorer.dash.org/chain/Dash/q/checkaddress/"
+check_addr_resp_errs = ['X5', 'SZ', 'CK']
 #########
 
 ##### start #####
@@ -81,8 +84,15 @@ bad_addrs=list()
 dup_addrs=list()
 
 for i in range(len(json_object["trans"])):
-    if (json_object["trans"][i]["address"] == "" 
-        or len(json_object["trans"][i]["address"]) != 34):
+    isBad = False
+    url = check_addr_url + json_object["trans"][i]["address"]
+    r = requests.get(url)
+    if (r.status_code == requests.codes.ok):
+        if (r.text in check_addr_resp_errs):
+            isBad = True
+    else:
+        print("Dash blockchain explorer address check status failed.  ->" + r.raise_for_status())    
+    if (isBad):
          bad_addrs.append(json_object["trans"][i]["address"])
     else:
         clean_addr = json_object["trans"][i]["address"]
@@ -155,7 +165,7 @@ if (len(bad_addrs) > 0 or len(dup_addrs) > 0):
 
 # write valid un-filled data out everytime
 print()
-print("----------  Updating balanced of those still in need. -----------------------")
+print("----------  Updating balanced of those still in need. --------------------")
 print()
 for i in range(len(json_object["trans"])):
     if (json_object["trans"][i]["filled"] == False):
