@@ -24,13 +24,13 @@ debug = False
 #########
 # This is where we define the location of the address file
 # address_dir = "/keybase/public/kcolussi/"
-address_dir = "/var/www/html/"
+address_dir = "./"
 #########
 
 #########
 # This is the filename
 # address_filename = "african-address-file.txt"
-address_filename = "foo.json"
+address_filename = "kevin.json"
 #########
 
 
@@ -84,15 +84,20 @@ dup_addrs=list()
 
 for i in range(len(json_object["trans"])):
     from bmdjson import check_address
-    vals = check_address(json_object["trans"][i]["address"],json_object["trans"][i]["keybase_user"]).split(';')
+    signed_data = json_object["trans"][i]["address"]
+    signed_vals = check_address(signed_data)
 
-    ### can't get this to run because of a permission issue on keybase.... Stopped v1.01 integration here.
-    print("**** vals = " + str(vals))
-    print("stdout split vals[0] ->" + vals[0] + "<")
-    print("stdout split vals[1] ->" + vals[1] + "<")
-        
+    signed_vals = [item.strip() for item in signed_vals.split(';')]
+
+    if (debug):
+        for idx, val in enumerate(signed_vals):
+            print("[" + str(idx) + "] = ", val)
+
+    signed_address = signed_vals[2]
+    if (debug): print("signed_address = " + signed_address)
+    
     isBad = False
-    url = check_addr_url + json_object["trans"][i]["address"]
+    url = check_addr_url + signed_address
     r = requests.get(url)
     if (r.status_code == requests.codes.ok):
         if (r.text in check_addr_resp_errs):
@@ -102,11 +107,14 @@ for i in range(len(json_object["trans"])):
     if (isBad):
          bad_addrs.append(json_object["trans"][i]["address"])
     else:
-        clean_addr = json_object["trans"][i]["address"]
+        clean_addr = signed_address
         # check for addr dups here
         cnt_dup = 0
         for j in range(len(json_object["trans"])):
-            if(json_object["trans"][j]["address"] == clean_addr):
+            cur_address = check_address(json_object["trans"][j]["address"]).split(';')[2]
+            
+            if (debug): print("cur_address = " + cur_address)
+            if(cur_address == clean_addr):
                 cnt_dup = cnt_dup + 1
         if (cnt_dup > 1):
             dup_addrs.append(json_object["trans"][i]["address"])
@@ -155,15 +163,21 @@ if (len(bad_addrs) > 0 or len(dup_addrs) > 0):
     print("***            Warning removing these invalid addreses                ***")
     print("*************************************************************************")
     for i in range(len(bad_addrs)):
+        signed_vals = check_address(bad_addrs[i])
+        signed_vals = [item.strip() for item in signed_vals.split(';')]
+        signed_address = signed_vals[2]
         bad_addr = bad_addrs[i]
-        print ("bad addr [" + str(i) + "] ->" + bad_addr + "<")
+        print ("bad addr [" + str(i) + "] -> " + signed_address + "<")
         for j in range(len(json_object["trans"])):
             if(json_object["trans"][j]["address"] == bad_addr):
                 del json_object["trans"][j]
                 break
     for i in range(len(dup_addrs)):
+        signed_vals = check_address(dup_addrs[i])
+        signed_vals = [item.strip() for item in signed_vals.split(';')]
+        signed_address = signed_vals[2]
         dup_addr = dup_addrs[i]
-        print ("dup addr [" + str(i) + "] ->" + dup_addr + "<")
+        print ("dup addr [" + str(i) + "] -> " + signed_address + "<")
         for j in range(len(json_object["trans"])):
             if(json_object["trans"][j]["address"] == dup_addr):
                 del json_object["trans"][j]
@@ -176,13 +190,17 @@ print("----------  Updating balanced of those still in need. -------------------
 print()
 for i in range(len(json_object["trans"])):
     if (json_object["trans"][i]["filled"] == False):
-        clean_addr = json_object["trans"][i]["address"]
-        url = expl_url + clean_addr
+        signed_vals = check_address(json_object["trans"][i]["address"])
+        signed_vals = [item.strip() for item in signed_vals.split(';')]
+        signed_address = signed_vals[2]
+        signed_msg = signed_vals[1]
+        
+        url = expl_url + signed_address
         r = requests.get(url)
         if (r.status_code == requests.codes.ok):
             expl_amt = float(r.text)
-            print(clean_addr + " -> needs "
-                  + str(round(deposit_max - expl_amt ,6)) + " to be full.")
+            print(signed_address + " -> needs "
+                  + str(round(deposit_max - expl_amt ,6)) + " to be full. (" + signed_msg + ")")
         else:
             print("Dash blockchain explorer address check status failed.  ->"
                   + r.raise_for_status())
