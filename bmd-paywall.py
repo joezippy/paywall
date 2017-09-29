@@ -30,13 +30,13 @@ address_dir = "/var/www/html/"
 #########
 # This is the filename
 # address_filename = "african-address-file.txt"
-address_filename = "african-address-file.txt"
+address_filename = "foo.json"
 #########
 
 
 #########
 # This is the #depost_max 
-deposit_max = .1
+deposit_max = .03
 deposit_max = round(deposit_max,6)
 #########
 
@@ -83,6 +83,14 @@ bad_addrs=list()
 dup_addrs=list()
 
 for i in range(len(json_object["trans"])):
+    from bmdjson import check_address
+    vals = check_address(json_object["trans"][i]["address"],json_object["trans"][i]["keybase_user"]).split(';')
+
+    ### can't get this to run because of a permission issue on keybase.... Stopped v1.01 integration here.
+    print("**** vals = " + str(vals))
+    print("stdout split vals[0] ->" + vals[0] + "<")
+    print("stdout split vals[1] ->" + vals[1] + "<")
+        
     isBad = False
     url = check_addr_url + json_object["trans"][i]["address"]
     r = requests.get(url)
