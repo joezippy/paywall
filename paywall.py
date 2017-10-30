@@ -72,6 +72,9 @@ COINMARKET_HEADERS = {'user-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_
                                    'AppleWebKit/537.36 (KHTML, like Gecko)'
                                    'Chrome/45.0.2454.101 Safari/537.36'),
                     'referer': 'https://coinmarketcap.com/'}
+
+QR_URL = "https://chart.googleapis.com/chart?chs=120x120&cht=qr&chl="
+
 #########
 
 def hrs_until_midnight():
@@ -135,18 +138,32 @@ def get_payee_keys(candidates,payment_count_current, payment_count_max,payment_d
 def paywall_output(json_directory, json_file, payment_count_max, payment_new_week,
                    payment_deposit_limit, payment_count_current, debug, testing):
       
-      print("Content-Type: text/plain\n")
-
-      if ((payment_new_week not in epoch_weekdays) and (payment_new_week.lower() != 'off')) :
-            print ("\n\npayment_new_week is invalid : " + payment_new_week + "\n\n")
-            return
-      
       json_dir = json_directory
       addr_filename = json_file
       src_file = os.path.join(json_dir, addr_filename)
       
       debug = str2bool(debug)
       testing = str2bool(testing)
+      
+      form = cgi.FieldStorage()
+      if (debug): print(str(form.getvalue("WP")))
+      if (form.getvalue("WP") is None):
+            wp = False
+      else:
+            wp = str2bool(form.getvalue("WP"))
+            
+      if (not wp):
+            if (debug): print("No WP!")
+            print("Content-Type: text/plain\n")
+      else:
+            if (debug): print("WP!")
+            print("Content-Type: text/html\n")
+            
+      
+      
+      if ((payment_new_week not in epoch_weekdays) and (payment_new_week.lower() != 'off')) :
+            if (not wp): print ("\n\npayment_new_week is invalid : " + payment_new_week + "\n\n")
+            return
       
       sys.stdout.flush()
       
@@ -191,10 +208,10 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             PAYMENT_DEPOSIT_LIMIT = float(payment_deposit_limit)
             PAYMENT_COUNT_CURRENT = int(payment_count_current)
             
-      print()        
-      print("----------  Updating balanced of those still in need. --------------------")
-      print()
-      sys.stdout.flush()
+      if (not wp): print()        
+      if (not wp): print("----------  Updating balanced of those still in need. --------------------")
+      if (not wp): print()
+      if (not wp): sys.stdout.flush()
       
       #########
       # process addresses here: only get payees who still need funds to check http balance
@@ -227,7 +244,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
 
       candidates = db["pay_to"]
       if (check_all_candidates) :
-            print("Everyone is ready for next payment (#"
+            if (not wp): print("Everyone is ready for next payment (#"
                   + str(PAYMENT_COUNT_CURRENT) + ") \n\n")
             payee_keys = candidates.keys()
       else:
@@ -267,34 +284,42 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                   if (debug) : print("current_payment_deposit_limit (after) = " + str(current_payment_deposit_limit))
                   
                   if (payee["address_balance"] <= current_payment_deposit_limit):
-                        print(str(payee_res["sig_addr"]) + " > needs "
+                        if (not wp): print(str(payee_res["sig_addr"]) + " > needs "
                               + str(round(current_payment_deposit_limit - payee["address_balance"],6))
                               + " Dash to be full. -> Signature status = "
                               + ["Bad", "Valid"][payee_res["sig_good"]])
+                        if (wp):
+                              print("<html><head><title>Paywall Output</title></head><body>")
+                              print("<iframe src=" + QR_URL + str(payee_res["sig_addr"]) + " frameborder=\"0\" scrolling=\"No\"></iframe>")
+                              print("<small><i>" + str(payee_res["sig_addr"]) + "</i></small><br>Dash Needed: " + str(round(current_payment_deposit_limit - payee["address_balance"],6))
+                                    + "<br>Address presented is: " + ["Bad", "Valid"][payee_res["sig_good"]] + "</body></html>")
+                              return
                   else:
-                        print("Dash blockchain explorer address check status failed ["
+                        if (not wp): print("Dash blockchain explorer address check status failed ["
                               + str(r.status_code) + "].  -> "
                               + str(r.raise_for_status()))
       else:
-            print("All these paywall needs have been filled. Please check here: \n"
+            if (not wp): print("All these paywall needs have been filled. Please check here: \n"
                   + "https://donate.greencandle.io/DashDirect/index.php/paywalls/ \nto view our other "
                   + "paywalls displaying other neededs.  \n\nHave a wonderful day and come back "
                   + "soon! We appreciate you.")
-      print()
-      print("--------------------------------------------------------------------------")
-      print()
-      print("Notes:")
-      print(" Addresses above are wait for payments in payment count ["
+            if (wp) : print("<html><body>All these paywall needs have been filled. Have a wonderful day and come back soon! We appreciate you.</body></html>")
+            
+      if (not wp): print()
+      if (not wp): print("--------------------------------------------------------------------------")
+      if (not wp): print()
+      if (not wp): print("Notes:")
+      if (not wp): print(" Addresses above are wait for payments in payment count ["
             + str(PAYMENT_COUNT_CURRENT) + "]")
-      print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts ["
+      if (not wp): print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts ["
             + str(PAYMENT_NEW_WEEK) + "]")
-      print(" [" + str(round(hrs_until_midnight(),2)) + "] hours till next day ["
+      if (not wp): print(" [" + str(round(hrs_until_midnight(),2)) + "] hours till next day ["
             + str(epoch_weekdays[now_weekday +1]) + "]")
-      print(" Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
-      print()
-      print()
-      print("Completed without error at : " + str(datetime.now()))
-      print()
+      if (not wp): print(" Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
+      if (not wp): print()
+      if (not wp): print()
+      if (not wp): print("Completed without error at : " + str(datetime.now()))
+      if (not wp): print()
       
       if (debug) :
             print("FILE                       - " + src_file)
