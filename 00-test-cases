@@ -1,0 +1,345 @@
+####################################################################
+# This file defines all server setup and known test cases for 
+# GenTwo of the paywall
+####################################################################
+
+######################################################################
+### Server ###
+######################################################################
+# every dir that /usr/bin/keybase needs to run within a paywall.py
+# or supporting .py file this directory must be linked to execute...
+cd /var/www/cgi-bin/dashdirect/dash-direct/<run-here>
+ln -s /var/www/.config .
+
+# the www-data must also have a shell in /etc/passwd
+# www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/bin/bash
+
+# to run the paywall.py script you must do the following:
+sudo bash
+su - www-data
+./paywall.py 
+
+
+######################################################################
+# Test that Keybase can properly run in the cgi-bin area
+######################################################################
+https://donate.greencandle.io/cgi-bin/dash-direct/test-keybase.py
+
+# Notes: run from the command line as user 'www-data'
+# Test: keybase execution from cgi-bin verify address signature in browser
+# Status: PASSING
+
+sudo bash; su - www-data; /var/www/cgi-bin/dash-direct/test-keybase.py
+/var/www/cgi-bin/dash-direct/test-keybase.py
+
+######################################################################
+# Input file generation testing
+######################################################################
+#
+# Notes: Must be joezippy to run and generate output file keybase user 'kcolussi'
+# Tests: dup address, invalid address, short address, long address
+# Checking: Correct record counts in json input files; bad and dup addresses bounce; proper signing; invalid args; 
+# Status: PASSING
+#
+
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T8 address-no-settings-1-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T8 address-no-settings-1-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T9 address-no-settings-1-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T address-no-settings-1-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T88 address-no-settings-1-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T8;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T8 address-no-settings-1-record.json;
+
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T8 address-no-settings-2-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py Xyb2qjuSVn82ewKNrh5KqNWZL2EarryuLZ address-no-settings-2-record.json kcolussi;
+
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyQ4hd9swYTMN7gYC5yKj9FY1VxjHjN6T8 address-no-settings-3-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py Xyb2qjuSVn82ewKNrh5KqNWZL2EarryuLZ address-no-settings-3-record.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XyMnryPagjC41awVazNqB4rmZ9XfDz1Qfg address-no-settings-3-record.json kcolussi;
+
+######################################################################
+# Paywall testing - General missing data, zero calcs
+######################################################################
+#
+# Notes: all accounts 0 balances and report paywall default as 'needed' amounts
+# Tests: no 'settings' value in the json file; no 'payments' in json under addresses;
+#          checking looping for balance output for 1,2,3 addresses; stop conditions; output sample *.out file
+# Checking: Input file processed properly without setting and payments; stop conditions; proper formating *.out files; zero account balance calcs
+# Status: PASSING
+#
+# Parm def:
+# def paywall_output(json_directory, json_file, payment_count_max, payment_new_week,
+#    		    payment_deposit_limit, payment_count_current, payment_is_new_week, debug, testing):  
+
+# round 1
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-2-record.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-3-record.json 5 Sat 1 1 no yes
+
+# round 2
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-2-record.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-3-record.json 5 Sat 1 2 no yes
+
+# round 3
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-2-record.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-3-record.json 5 Sat 1 3 no yes
+
+# round 5
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-2-record.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-3-record.json 5 Sat 1 5 no yes
+
+# round 6
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 5 Sat 1 6 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-2-record.json 5 Sat 1 6 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-3-record.json 5 Sat 1 6 no yes
+
+######################################################################
+# Paywall Testing - Add test for payments and address_balance math 
+######################################################################
+# 
+# Note: Build input files with sed with output from previous step  (Clean: rm address-[0-9]-*)
+# Tests: Proper math for address_balance for 1-3 addresses in the json file; current_week_count used in calculations
+# Checking: All *.out files for proper json formating, all paywall output is correct for record count and address balances are as expected
+# Status: PASSING
+
+# gen test input files
+
+#
+# these 'sed' statement should be copied after 'cat' this file to avoid error new lines in paste
+#
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447}]/g' address-no-settings-1-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199911,/g' > address-1-payments-1-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067448}]/g' address-no-settings-1-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199922,/g' > address-2-payments-1-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067448},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067449}]/g' address-no-settings-1-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199933,/g' > address-3-payments-1-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447}]/g' address-no-settings-2-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199911,/g' > address-1-payments-2-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067448}]/g' address-no-settings-2-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199922,/g' > address-2-payments-2-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067448},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067449}]/g' address-no-settings-2-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199933,/g' > address-3-payments-2-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447}]/g' address-no-settings-3-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199911,/g' > address-1-payments-3-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067448}]/g' address-no-settings-3-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199922,/g' > address-2-payments-3-records.json;
+
+sed 's/"payments"\: \[\]/"payments": [{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067447},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067448},{"amount": 0.01,"dash_price": 123.123,"ts_created": 1509067449}]/g' address-no-settings-3-record.json |
+sed 's/"address_balance"\:.*,/"address_balance": 0.0199933,/g' > address-3-payments-3-records.json;
+
+# start 1 payment test below
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-1-records.json 5 Sat 1 6 no yes
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-2-records.json 5 Sat 1 6 no yes
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-1-payments-3-records.json 5 Sat 1 6 no yes
+
+# start 2 payment test below
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-1-records.json 5 Sat 1 6 no yes
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-2-records.json 5 Sat 1 6 no yes
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-2-payments-3-records.json 5 Sat 1 6 no yes
+
+# start 3 payment test below
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-1-records.json 5 Sat 1 6 no yes
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-2-records.json 5 Sat 1 6 no yes
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 3 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 4 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 5 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 5 Sat 1 6 no yes
+
+######################################################################
+# Paywall - Balance range testing
+######################################################################
+#
+# Tests: Check that value ranges are calculated properly
+# Checking: Output values; no-settings file has address balance=zero; others have balance=0.0199933
+# Status: PASSING
+#
+# Parm def:
+# def paywall_output(json_directory, json_file, payment_count_max, payment_new_week,
+#    		    payment_deposit_limit, payment_count_current, payment_is_new_week, debug, testing):  
+
+# One payment of one - completed by Sat
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1 Sat 1 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1 Sat 1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1 Sat 1 2 no yes;
+
+# tiny payment of one - completed by Sat
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 1 Sat .0001 0 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 1 Sat .0001 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-no-settings-1-record.json 1 Sat .0001 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1 Sat .0001 2 no yes;
+
+# payment of 100 - completed by Sat
+
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1000 Sat .1 1 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1000 Sat .1 2 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1000 Sat .1 500 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1000 Sat .1 1000 no yes;
+/var/www/cgi-bin/dash-direct/paywall.py ./test-files address-3-payments-3-records.json 1000 Sat .1 2000 no yes;
+
+
+######################################################################
+# Paywall testing - Check day rotation affects
+######################################################################
+#
+# Notes: You will need to adjust your expectations based on the day (run paywall.py) to see current day
+#         payment_new_week options: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+#
+#	  Crontab might be need to make sure the paywall is called every sat at least once
+# Tests: That as the day changes; new payment_current_count and is_new_week is set properly; last payment completes clean
+# Checking: That on payment_new_week match -> payment count increases; data written down to
+# 	    json default.json 	     <- non-testing
+#	    json default.json.out    <- testing
+# Status: PASSING
+
+# We need to copy test config file so it can be written down for this test
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Sun .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Mon .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Tue .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Wed .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Thu .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Fri .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Sat .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 OFF .0001 5 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 XYZ .0001 5 no yes;
+
+# set the next_week value here before running (past, present, past); this is to make sure the payment_count is not exceeded at the end of the payment_count
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Sun .0001 33 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Mon .0001 33 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 33 Sun .0001 34 no yes;
+
+# set next_week to current in the config file then run as if in browser
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py;
+
+######################################################################
+# Paywall testing - wallets with balances
+######################################################################
+#
+# Note: check to make sure these wallets show in the paywall when expected.
+# Tests: below paywall, at paywall, above paywall
+# Checking: using default.json via web browser; payment added to the default.json file and account_balance updated
+# Status: PASSING
+
+# as joezippy
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XfVdK2Jm6exfKPubV9UGgxrtKRDStcCX74 wallet-below-.01.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py Xjr2gR1DkcN9u9Ndd6ZBdaNxU6HMBiC9dA wallet-at-.01.json kcolussi;
+keybase login && /var/www/cgi-bin/dash-direct/bmdjson.py XkmoQiR6MVkeCLZEDXQsS7WJWmH221TEx2 wallet-above-.01.json kcolussi;
+
+# XfVdK2Jm6exfKPubV9UGgxrtKRDStcCX74 - .001
+cp ./test-files/wallet-below-.01.json ./test-files/default.json;
+wget -qO- donate.greencandle.io/cgi-bin/dash-direct/paywall.py
+
+# Xjr2gR1DkcN9u9Ndd6ZBdaNxU6HMBiC9dA - .01
+cp ./test-files/wallet-at-.01.json ./test-files/default.json;
+wget -qO- donate.greencandle.io/cgi-bin/dash-direct/paywall.py
+
+# XkmoQiR6MVkeCLZEDXQsS7WJWmH221TEx2 - .011
+cp ./test-files/wallet-above-.01.json ./test-files/default.json;
+wget -qO- donate.greencandle.io/cgi-bin/dash-direct/paywall.py
+
+# XkmoQiR6MVkeCLZEDXQsS7WJWmH221TEx2 - .011  (payment #2 - chg in paywall.py header WEB_PAYMENT_COUNT_CURRENT=2
+cp ./test-files/wallet-above-.01.json ./test-files/default.json;
+wget -qO- donate.greencandle.io/cgi-bin/dash-direct/paywall.py
+
+# Change paywall.py to match the day *in the json file* payment_new_week = 'today'
+wget -qO- donate.greencandle.io/cgi-bin/dash-direct/paywall.py
+
+# make paywall deposit transaction and make sure payment registered next time paywall runs
+# cp ./test-files/wallet-below-.01.json ./test-files/default.json;
+wget -qO- donate.greencandle.io/cgi-bin/dash-direct/paywall.py
+
+
+######################################################################
+# Paywall testing - no weekly check
+######################################################################
+#
+# Notes: address balance = zero
+# Tests: check that PAYMENT_NEW_WEEK is un used in the case that only filled addresses are removed regardless of time
+# Checking: that the single address in the paywall needs the assigned amount, with new week 'off', default.json.out has default 'off' values set
+# Status: PASSING
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 1 OFF .0001 1 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 1 OFF .01 1 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 1 OFF .1 1 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 1 OFF 5 1 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 1 OFF 500 1 no yes;
+cp ./test-files/address-no-settings-1-record.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 100 OFF .0001 10 no yes;
+
+
+# checking price added to out 
+cp ./test-files/wallet-below-.01.json ./test-files/default.json; /var/www/cgi-bin/dash-direct/paywall.py ./test-files default.json 1 OFF 500 1 no yes;
+
+
