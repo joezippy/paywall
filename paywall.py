@@ -209,7 +209,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             PAYMENT_COUNT_CURRENT = int(payment_count_current)
             
       if (not wp): print()        
-      if (not wp): print("----------  Updating balanced of those still in need. --------------------")
+      if (not wp): print("----------  Updating balances of those still in need. --------------------")
       if (not wp): print()
       if (not wp): sys.stdout.flush()
       
@@ -299,11 +299,14 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                               + str(r.status_code) + "].  -> "
                               + str(r.raise_for_status()))
       else:
-            if (not wp): print("All these paywall needs have been filled. Please check here: \n"
-                  + "https://donate.greencandle.io/DashDirect/index.php/paywalls/ \nto view our other "
-                  + "paywalls displaying other neededs.  \n\nHave a wonderful day and come back "
+            if (not wp): print("All these paywall needs have been filled. Please check: "
+                  + "http://give.dashdirect.io \nto view our other "
+                  + "paywalls displaying other needs.  \n\nHave a wonderful day and come back "
                   + "soon! We appreciate you.")
-            if (wp) : print("<html><body>All these paywall needs have been filled. Have a wonderful day and come back soon! We appreciate you.</body></html>")
+            if (wp) : print("<html><body>All these paywall needs have been filled."
+                            + "<img src='https://i0.wp.com/donate.greencandle.io/DashDirect/wp-content/uploads/2017/10/heart-1-e1507301788504.png?resize=15%2C15&ssl=1'>"
+                            + "<p> Click <a href=\"http://give.dashdirect.io\" target=\"_blank\" rel=\"noopener\">give.dashdirect.io</a>"
+                            + " for other paywall locations. Have a wonderful day and come back soon! We appreciate you. </body></html>")
             
       if (not wp): print()
       if (not wp): print("--------------------------------------------------------------------------")
