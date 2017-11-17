@@ -12,6 +12,8 @@ import sys
 from datetime import datetime, timedelta, time
 from random import randint
 from bmdjson import check_address
+from copy import deepcopy
+from copy import copy
 
 ############################################################################
 # File: paywall.py
@@ -112,7 +114,7 @@ def get_payee_keys(candidates,payment_count_current, payment_count_max,payment_d
 
             if (debug) : print("payment_count_current * payment_deposit_limit = "
                   + str(float(payment_count_current)) + " * "
-                  +  str(float(payment_deposit_limit)))
+                 +  str(float(payment_deposit_limit)))
             max_payment_todate = float(payment_count_current * payment_deposit_limit)
             if (debug): print("max_payment_todate = " + str(max_payment_todate))
             
@@ -151,15 +153,22 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             wp = False
       else:
             wp = str2bool(form.getvalue("WP"))
-            
-      if (not wp):
-            if (debug): print("No WP!")
-            print("Content-Type: text/plain\n")
+
+      if (debug): print(str(form.getvalue("APP")))
+      if (form.getvalue("APP") is None):
+            app = False
       else:
+            app = str2bool(form.getvalue("APP"))
+
+      if (app):            
+            print("Content-Type: application/json\n")
+            json_out = {}
+      elif (wp):
             if (debug): print("WP!")
             print("Content-Type: text/html\n")
-            
-      
+      else:
+            if (debug): print("No WP!")
+            print("Content-Type: text/plain\n")
       
       if ((payment_new_week not in epoch_weekdays) and (payment_new_week.lower() != 'off')) :
             if (not wp): print ("\n\npayment_new_week is invalid : " + payment_new_week + "\n\n")
@@ -208,10 +217,10 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             PAYMENT_DEPOSIT_LIMIT = float(payment_deposit_limit)
             PAYMENT_COUNT_CURRENT = int(payment_count_current)
             
-      if (not wp): print()        
-      if (not wp): print("----------  Updating balances of those still in need. --------------------")
-      if (not wp): print()
-      if (not wp): sys.stdout.flush()
+      if (not wp and not app): print()        
+      if (not wp and not app): print("----------  Updating balances of those still in need. --------------------")
+      if (not wp and not app): print()
+      if (not wp and not app): sys.stdout.flush()
       
       #########
       # process addresses here: only get payees who still need funds to check http balance
@@ -244,7 +253,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
 
       candidates = db["pay_to"]
       if (check_all_candidates) :
-            if (not wp): print("Everyone is ready for next payment (#"
+            if (not wp and not app): print("Everyone is ready for next payment (#"
                   + str(PAYMENT_COUNT_CURRENT) + ") \n\n")
             payee_keys = candidates.keys()
       else:
@@ -284,22 +293,26 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                   if (debug) : print("current_payment_deposit_limit (after) = " + str(current_payment_deposit_limit))
                   
                   if (payee["address_balance"] <= current_payment_deposit_limit):
-                        if (not wp): print(str(payee_res["sig_addr"]) + " > needs "
-                              + str(round(current_payment_deposit_limit - payee["address_balance"],6))
-                              + " Dash to be full. -> Signature status = "
-                              + ["Bad", "Valid"][payee_res["sig_good"]])
                         if (wp):
                               print("<html><head><title>Paywall Output</title></head><body>")
                               print("<iframe src=" + QR_URL + str(payee_res["sig_addr"]) + " frameborder=\"0\" scrolling=\"No\"></iframe>")
                               print("<small><i>" + str(payee_res["sig_addr"]) + "</i></small><br>Dash Needed: " + str(round(current_payment_deposit_limit - payee["address_balance"],6))
                                     + "<br>Address presented is: " + ["Bad", "Valid"][payee_res["sig_good"]] + "</body></html>")
                               return
+                        if (app):
+                              payee["remaining_pmt_needed"] = round(current_payment_deposit_limit - payee["address_balance"],6)
+                              json_out[key] = (copy(payee))
+                              del payee["remaining_pmt_needed"]
+                        if (not wp and not app): print(str(payee_res["sig_addr"]) + " > needs "
+                              + str(round(current_payment_deposit_limit - payee["address_balance"],6))
+                              + " Dash to be full. -> Signature status = "
+                              + ["Bad", "Valid"][payee_res["sig_good"]])
                   else:
-                        if (not wp): print("Dash blockchain explorer address check status failed ["
+                        if (not wp and not app): print("Dash blockchain explorer address check status failed ["
                               + str(r.status_code) + "].  -> "
                               + str(r.raise_for_status()))
       else:
-            if (not wp): print("All these paywall needs have been filled. Please check: "
+            if (not wp and not app): print("All these paywall needs have been filled. Please check: "
                   + "http://give.dashdirect.io \nto view our other "
                   + "paywalls displaying other needs.  \n\nHave a wonderful day and come back "
                   + "soon! We appreciate you.")
@@ -308,22 +321,26 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                             + "<p> Click <a href=\"http://give.dashdirect.io\" target=\"_blank\" rel=\"noopener\">give.dashdirect.io</a>"
                             + " for other paywall locations. Have a wonderful day and come back soon! We appreciate you. </body></html>")
             
-      if (not wp): print()
-      if (not wp): print("--------------------------------------------------------------------------")
-      if (not wp): print()
-      if (not wp): print("Notes:")
-      if (not wp): print(" Addresses above are wait for payments in payment count ["
+      if (not wp and not app): print()
+      if (not wp and not app): print("--------------------------------------------------------------------------")
+      if (not wp and not app): print()
+      if (not wp and not app): print("Notes:")
+      if (not wp and not app): print(" Addresses above are wait for payments in payment count ["
             + str(PAYMENT_COUNT_CURRENT) + "]")
-      if (not wp): print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts ["
+      if (not wp and not app): print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts ["
             + str(PAYMENT_NEW_WEEK) + "]")
-      if (not wp): print(" [" + str(round(hrs_until_midnight(),2)) + "] hours till next day ["
+      if (not wp and not app): print(" [" + str(round(hrs_until_midnight(),2)) + "] hours till next day ["
             + str(epoch_weekdays[now_weekday +1]) + "]")
-      if (not wp): print(" Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
-      if (not wp): print()
-      if (not wp): print()
-      if (not wp): print("Completed without error at : " + str(datetime.now()))
-      if (not wp): print()
-      
+      if (not wp and not app): print(" Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
+      if (not wp and not app): print()
+      if (not wp and not app): print()
+      if (not wp and not app): print("Completed without error at : " + str(datetime.now()))
+      if (not wp and not app): print()
+
+      if (app):
+            json_out["settings"] = db["settings"]
+            print(str(json.dumps(json_out, indent=4, sort_keys=True)))
+
       if (debug) :
             print("FILE                       - " + src_file)
             print("EXPLORER_RECEIVED_BY_URL   - " + EXPLORER_RECEIVED_BY_URL)
