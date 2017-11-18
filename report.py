@@ -109,8 +109,8 @@ def paywall_output(json_directory, json_file, debug):
             PAYWALL_TOTAL_DASH = PAYWALL_TOTAL_DASH + address_total_dash
             PAYWALL_TOTAL_US = PAYWALL_TOTAL_US + address_total_us
             if (not wp): print(str(payee["address"]) + " : "
-                                        + str(address_total_dash) + " Dash; "
-                                        + str(address_total_us) + " USD")
+                                        + str(format(round(address_total_dash,4), '.4f') + " Dash; "
+                                        + str(format(round(address_total_us,2), '.2f') + " USD")))
             
       if (not wp): print()
       if (not wp): print("---------------")
@@ -120,8 +120,8 @@ def paywall_output(json_directory, json_file, debug):
       if (not wp): print("FILE                      - "
                                   + dirname(abspath(__file__))
                                   + "/" + src_file)
-      if (not wp): print("PAYWALL_TOTAL_DASH        - " + str(PAYWALL_TOTAL_DASH))
-      if (not wp): print("PAYWALL_TOTAL_US          - " + str(PAYWALL_TOTAL_US))
+      if (not wp): print("PAYWALL_TOTAL_DASH        - " + str(format(round(PAYWALL_TOTAL_DASH,4), '.4f')))
+      if (not wp): print("PAYWALL_TOTAL_US          - " + str(format(round(PAYWALL_TOTAL_US,2), '.2f')))
       if (not wp): print()
       if (not wp): print("Completed without error at : " + str(datetime.now()))
       if (not wp): print()
