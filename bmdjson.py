@@ -11,7 +11,7 @@ import requests
 import sys
 import time
 
-from subprocess import Popen, PIPE, STDOUT, call
+from subprocess import Popen, PIPE, STDOUT, call, check_output
 
 ############################################################################
 # File: bmdjson.py
@@ -28,8 +28,29 @@ def completed_quarter(dt):
     quarter, yd = prev_quarter_map[(dt.month - 1) // 3]
     return (dt.year + yd, quarter)
 
-def check_address(encrypted_text):
-    return encrypted_text
+def encode(text):
+    retcode, stdout = None, None
+    out = ""
+    try:
+        cmd = 'echo %s |  openssl enc -des-ecb -base64 -pass file:%s' % (text,"/var/www/dash-direct/hex.key")
+        proc = Popen(cmd, shell=True, stdout=PIPE, )
+        stdout, stderr = proc.communicate()
+        retcode = proc.wait()
+    except Exception as e:
+        print("command %s died happily doing: %s" % (cmd, str(e)))
+    return "".join(map(chr, stdout)).replace('\n', '').replace('\r', '')
+
+
+def decode(text):
+    retcode, stdout = None, None
+    try:
+        cmd = 'echo %s | openssl enc -d -des-ecb -base64 -pass file:%s' % (text,"/var/www/dash-direct/hex.key")
+        proc = Popen(cmd, shell=True, stdout=PIPE, )
+        stdout, stderr = proc.communicate()
+        retcode = proc.wait()
+    except Exception as e:
+        print("command %s died happily doing: %s" % (cmd, str(e)))
+    return "".join(map(chr, stdout)).replace('\n', '').replace('\r', '')
 
 def get_sha512_32_hash(string):
     return hashlib.sha512(string.encode('ascii')).hexdigest()[:32]
@@ -50,8 +71,7 @@ def add_address(wallet_address, json_file):
 
     import hashlib
     db_key = get_sha512_32_hash(wallet_address)
-    #print(db_key)
-    signature = wallet_address
+    signature = encode(wallet_address)
 
     print("{\"timestamp_ms\": 1505874716,\"address\": \"" +
           str(signature) + "\",\"filled\": false},")

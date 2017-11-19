@@ -12,7 +12,6 @@ import sys
 from os.path import dirname, abspath
 from datetime import datetime, timedelta, time
 from random import randint
-from bmdjson import check_address
 
 ############################################################################
 # File: report.py

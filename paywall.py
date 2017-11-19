@@ -12,9 +12,7 @@ import sys
 from copy import copy
 from datetime import datetime, timedelta, time
 from random import randint
-from bmdjson import check_address
-from bmdjson import completed_quarter
-from bmdjson import get_sha512_32_hash
+from bmdjson import completed_quarter, get_sha512_32_hash, decode
 
 ############################################################################
 # File: paywall.py
@@ -106,7 +104,7 @@ def get_dash_total_received(payee_keys,candidates,debug):
       big_url = EXPLORER_RECEIVED_BY_URL
       for key in payee_keys:
             payee = candidates[key]
-            big_url = big_url + check_address(payee["address_signature"]) + "|"
+            big_url = big_url + decode(payee["address_signature"]) + "|"
       if (debug): print("big_url = " + str(big_url))
       r = requests.get(big_url,EXPLORER_HEADERS)
       if (r.status_code == requests.codes.ok):
@@ -127,7 +125,6 @@ def get_payee_keys(candidates,payment_count_current, payment_count_max,payment_d
       payee_keys = []
       for record in candidates.keys():
             payee = candidates[record]
-            if (debug): print("payee[address_signature] = " + str(payee["address_signature"]))
             if not payee["active"]:
                   continue
 
@@ -164,9 +161,13 @@ def do_app_out(payee_out, settings, current_payment_deposit_limit):
       print("Content-Type: application/json\n")
       json_out = {}
       for payee in payee_out:
-            payee["remaining_pmt_needed"] = round(current_payment_deposit_limit - payee["address_balance"],6)
-            json_out[get_sha512_32_hash(payee["address"])]= (copy(payee))
-            del payee["remaining_pmt_needed"]
+            address = decode(payee["address_signature"])
+            if (len(address) > 0) :
+                  payee["remaining_pmt_needed"] = round(current_payment_deposit_limit - payee["address_balance"],6)
+                  json_out[get_sha512_32_hash(payee["address"])]= (copy(payee))
+                  del payee["remaining_pmt_needed"]
+            else:
+                  del payee
       json_out["settings"] = settings
       print(str(json.dumps(json_out, indent=4, sort_keys=True)))
       
@@ -176,10 +177,14 @@ def do_wp_out(payee_out, settings, current_payment_deposit_limit):
 
       if len(payee_out) > 0:
             for payee in payee_out:
-                  print("<iframe src=" + QR_URL + str(payee["address_signature"]) + " frameborder=\"0\" scrolling=\"No\"></iframe>")
-                  print("<small><i>" + str(payee["address_signature"]) + "</i></small><br>Dash Needed: "
-                        + str(round(current_payment_deposit_limit - payee["address_balance"],6))
-                        + "<br>Address presented is: " + ["Bad", "Valid"][True] + "</body></html>")
+                  address = decode(payee["address_signature"])
+                  if (len(address) > 0) :
+                        print("<iframe src=" + QR_URL + str(address) + " frameborder=\"0\" scrolling=\"No\"></iframe>")
+                        print("<small><i>" + str(address) + "</i></small><br>Dash Needed: "
+                              + str(round(current_payment_deposit_limit - payee["address_balance"],6))
+                              + "<br>Address presented is: Valid </body></html>")
+                  else:
+                        print("<small><b><br>Address presented " + payee["address"] + " is: Bad</b></body></html>")                        
                   return  #only one
       else:
             print("<html><body>All these paywall needs have been filled."
@@ -194,10 +199,13 @@ def do_text_out(payee_out, settings, current_payment_deposit_limit, PAYMENT_COUN
       print()
       if len(payee_out) > 0:
             for payee in payee_out:
-                  print(str(payee["address_signature"]) + " > needs "
-                        + str(format(round(current_payment_deposit_limit - payee["address_balance"],4), '.4f'))
-                        + " Dash to be full. -> Signature status = "
-                        + ["Bad", "Valid"][True])
+                  address = decode(payee["address_signature"])
+                  if (len(address) > 0) :
+                        print(str(address) + " > needs "
+                              + str(format(round(current_payment_deposit_limit - payee["address_balance"],4), '.4f'))
+                              + " Dash to be full. -> Address presented is: Valid")
+                  else:
+                        print("Address presented " + payee["address"] + " is: Bad")                                                
       else:
             print("All these paywall needs have been filled. Please check: "
                   + "http://give.dashdirect.io \nto view our other "
@@ -336,6 +344,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                   print("PAYMENT_COUNT_CURRENT > PAYMENT_COUNT_MAX (" + str(PAYMENT_COUNT_CURRENT) + " > " + str(PAYMENT_COUNT_MAX) + ")")
                   print("PAYMENT_COUNT_CURRENT " + str(PAYMENT_COUNT_CURRENT))
             candidates = get_dash_total_received(payee_keys,db["pay_to"],debug)
+            yr,qtr = completed_quarter(datetime.today())
             for payee in candidates.values():
                   if (debug): print("payee : " + json.dumps(payee, sort_keys=True, indent=8))
                   if (payee["active"]):
@@ -344,7 +353,6 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                         if (address_balance > payee["address_balance"]):
                               # add new delta transactions to the json file
                               if (debug): print("\naddress_balance (" + str(address_balance) + ") > payee[address_balance] (" + str(payee["address_balance"]) + ")")
-                              yr,qtr = completed_quarter(datetime.today())
                               new_payment = {}
                               new_payment = {
                                     "amount" : round(address_balance - payee['address_balance'],6),
@@ -355,10 +363,9 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                               payee["payments"].append(new_payment)
                               payee["address_balance"] = address_balance
 
-                              if (debug) : 
-                                    print("\nAfter payments added: "+  json.dumps(payee, sort_keys=True, indent=8))
-                        if (payee["address_balance"] <= current_payment_deposit_limit):
-                              payee_out.append(payee)
+                              if (debug) : print("\nAfter payments added: "+  json.dumps(payee, sort_keys=True, indent=8))
+                  if (payee["address_balance"] < current_payment_deposit_limit):
+                        payee_out.append(payee)
             if (PAYMENT_COUNT_CURRENT >= PAYMENT_COUNT_MAX) :
                   PAYMENT_COUNT_CURRENT = PAYMENT_COUNT_MAX
 
