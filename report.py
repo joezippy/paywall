@@ -37,10 +37,132 @@ WEB_DEBUG = "no"
 def str2bool(v):
       return v.lower() in ("yes", "true", "t", "1")
 
-def paywall_output(json_directory, json_file, debug):
-
+def do_wp_output(candidates,debug):
       PAYWALL_TOTAL_DASH = 0.0      
       PAYWALL_TOTAL_US = 0.0
+      data_out = {}
+      payee_keys = candidates.keys()
+      for key in payee_keys:
+            payee = candidates[key]
+            # loop and calc all paywment here
+            address_total_dash = 0.0
+            address_total_us = 0.0
+            for pay in payee["payments"] :
+                  if (debug): print(str(pay["amount"]) + " * "
+                                    + str(pay["dash_price"])
+                                    + " Dash => "
+                                    + str(pay["amount"]*pay["dash_price"]) + " USD")
+                  address_total_dash = address_total_dash + pay["amount"]
+                  address_total_us = address_total_us + pay["amount"]*pay["dash_price"]
+            PAYWALL_TOTAL_DASH = PAYWALL_TOTAL_DASH + address_total_dash
+            PAYWALL_TOTAL_US = PAYWALL_TOTAL_US + address_total_us
+            data_out[payee["address"]] = ["Dash : " + str(format(round(address_total_dash,4), '.4f')) ,
+                                          "USD : " + str(format(round(address_total_us,2), '.2f'))]
+
+      print("Content-Type: text/html\n\n")
+      print("<html><body><title>Paywall Report</title><small><a href=\"")
+      print("https://" + str(os.environ["HTTP_HOST"]) + str(os.environ["SCRIPT_NAME"]))
+      print("\" target=\"_blank\" rel=\"noopener\">Current Paywall Totals</a>: <br>"
+            + str(round(PAYWALL_TOTAL_DASH,3)) + " Dash; "
+            + str(round(PAYWALL_TOTAL_US,2)) + " USD </small></body></html>") 
+      return
+
+def do_qtr_output(candidates,completed_quarter,completed_quarter_curr,src_file,debug):
+      PAYWALL_TOTAL_DASH = 0.0      
+      PAYWALL_TOTAL_US = 0.0
+      data_out = {}
+      payee_keys = candidates.keys()
+      for key in payee_keys:
+            payee = candidates[key]
+            # loop and calc all paywment here
+            for pay in payee["payments"] :
+                  if (debug) : print(str(payee["address"]) + " -> " + str(pay["completed_quarter"])
+                        + " -> (" + str(pay["amount"]) + " * " + str(pay["dash_price"]) + ") Dash => " + str(pay["amount"]*pay["dash_price"]) + " USD")
+                  PAYWALL_TOTAL_DASH = PAYWALL_TOTAL_DASH + pay["amount"]
+                  PAYWALL_TOTAL_US = PAYWALL_TOTAL_US + pay["amount"]*pay["dash_price"]
+                  if (pay["completed_quarter"] in data_out) :
+                        qtr_dash = float(data_out[pay["completed_quarter"]]["Dash"])
+                        qtr_us = float(data_out[pay["completed_quarter"]]["USD"])
+                        data_out[pay["completed_quarter"]] = {"Dash" : str(format(round(pay["amount"]+qtr_dash,4), '.4f')) ,
+                                                              "USD" : str(format(round((pay["amount"]*pay["dash_price"])+qtr_us,2), '.2f'))}
+                  else:
+                        #first find of qtr
+                        data_out[pay["completed_quarter"]] = {"Dash" : str(format(round(pay["amount"],4), '.4f')) ,
+                                                              "USD" : str(format(round(pay["amount"]*pay["dash_price"],2), '.2f'))}
+
+      if (len(completed_quarter) > 0 and len(completed_quarter_curr) > 0) :
+            simple_out = "0"
+            if (completed_quarter in data_out):
+                  if (completed_quarter_curr.lower() in ("usd", "us")):
+                        simple_out = str(data_out[completed_quarter]["USD"])                        
+                  else:
+                        simple_out = str(data_out[completed_quarter]["Dash"])
+            print("Content-Type: text/plain\n")
+            print(simple_out)
+      else:
+            print("Content-Type: text/html\n\n")
+            print("<html><head><title>Paywall Report</title><body><h3>Paywall Address Report (" + completed_quarter + ")</h3>")
+            print("<pre>")
+            print("---------------")      
+            for key in sorted(data_out):
+                  print(str(key) + " - " + str(data_out[key]))
+            print("---------------")
+            print("Notes:")
+            print("  UDS value is calculated based on the deposit capture price, not the current Dash price.")
+            print()
+            print("FILE                      - " + dirname(abspath(__file__)) + "/" + src_file)
+            print("PAYWALL_TOTAL_DASH        - " + str(format(round(PAYWALL_TOTAL_DASH,4), '.4f')))
+            print("PAYWALL_TOTAL_US          - " + str(format(round(PAYWALL_TOTAL_US,2), '.2f')))
+            print()
+            print("Completed without error at : " + str(datetime.now()))
+            print()
+            print("</pre></body></html>")
+      return
+
+def do_html_output(candidates,src_file,debug):
+      PAYWALL_TOTAL_DASH = 0.0      
+      PAYWALL_TOTAL_US = 0.0
+      data_out = {}
+      payee_keys = candidates.keys()
+      for key in payee_keys:
+            payee = candidates[key]
+            # loop and calc all paywment here
+            address_total_dash = 0.0
+            address_total_us = 0.0
+            for pay in payee["payments"] :
+                  if (debug): print(str(pay["amount"]) + " * "
+                                    + str(pay["dash_price"])
+                                    + " Dash => "
+                                    + str(pay["amount"]*pay["dash_price"]) + " USD")
+                  address_total_dash = address_total_dash + pay["amount"]
+                  address_total_us = address_total_us + pay["amount"]*pay["dash_price"]
+            PAYWALL_TOTAL_DASH = PAYWALL_TOTAL_DASH + address_total_dash
+            PAYWALL_TOTAL_US = PAYWALL_TOTAL_US + address_total_us
+            data_out[payee["address"]] = {"Dash" : str(format(round(address_total_dash,4), '.4f')) ,
+                                          "USD" : str(format(round(address_total_us,2), '.2f'))}
+
+      print("Content-Type: text/html\n\n")
+      print("<html><head><title>Paywall Report</title><body><h3>Paywall Address Report</h3>")
+      print("<pre>")
+      print()
+      print("---------------")
+      for key in data_out:
+            print("<a href=\"https://chainz.cryptoid.info/dash/address.dws?" + str(key) + "\" target=\"_blank\" rel=\"noopener\">"
+                  + str(key) + "</a> - " + str(data_out[key]))
+      print("---------------")
+      print("Notes:")
+      print("  UDS value is calculated based on the deposit capture price, not the current Dash price.")
+      print()
+      print("FILE                      - " + dirname(abspath(__file__)) + "/" + src_file)
+      print("PAYWALL_TOTAL_DASH        - " + str(format(round(PAYWALL_TOTAL_DASH,4), '.4f')))
+      print("PAYWALL_TOTAL_US          - " + str(format(round(PAYWALL_TOTAL_US,2), '.2f')))
+      print()
+      print("Completed without error at : " + str(datetime.now()))
+      print()
+      print("</pre></body></html>")
+      return
+
+def report_output(json_directory, json_file, debug):
       json_dir = json_directory
       addr_filename = json_file
       src_file = os.path.join(json_dir, addr_filename)
@@ -55,15 +177,15 @@ def paywall_output(json_directory, json_file, debug):
             wp = False
       else:
             wp = str2bool(form.getvalue("WP"))
-            
-      if (not wp):
-            if (debug): print("No WP!")
-            print("Content-Type: text/plain\n")
+
+      qtr_report = False
+      if (form.getvalue("QTR") is None):
+            qtr_report = False
       else:
-            if (debug): print("WP!")
-            print("Content-Type: text/html\n")
-            
-      sys.stdout.flush()
+            qtr_report = str2bool(form.getvalue("QTR"))
+
+      completed_quarter = "" if not form.getvalue("completed_quarter") else form.getvalue("completed_quarter")
+      completed_quarter_curr = "" if not form.getvalue("completed_quarter_curr") else form.getvalue("completed_quarter_curr")
       
       #########
       # read source
@@ -87,58 +209,23 @@ def paywall_output(json_directory, json_file, debug):
             PAYMENT_IS_NEW_WEEK = str2bool(str(db["settings"][0]["payment_is_new_week"]))
             DEBUG = str2bool(str(db["settings"][0]["debug"]))
 
-      if (not wp): print()
-      if (not wp): print("---------------")
-      if (not wp): print()      
       candidates = db["pay_to"]
-      payee_keys = candidates.keys()
-      for key in payee_keys:
-            payee = candidates[key]
-            if (debug) : print("\nBefore payments reported : " + json.dumps(payee, sort_keys=True, indent=8))
-            # loop and calc all paywment here
-            address_total_dash = 0.0
-            address_total_us = 0.0
-            for pay in payee["payments"] :
-                  if (debug): print(str(pay["amount"]) + " * "
-                                    + str(pay["dash_price"])
-                                    + " Dash => "
-                                    + str(pay["amount"]*pay["dash_price"]) + " USD")
-                  address_total_dash = address_total_dash + pay["amount"]
-                  address_total_us = address_total_us + pay["amount"]*pay["dash_price"]
-            PAYWALL_TOTAL_DASH = PAYWALL_TOTAL_DASH + address_total_dash
-            PAYWALL_TOTAL_US = PAYWALL_TOTAL_US + address_total_us
-            if (not wp): print(str(payee["address"]) + " : "
-                                        + str(format(round(address_total_dash,4), '.4f') + " Dash; "
-                                        + str(format(round(address_total_us,2), '.2f') + " USD")))
-            
-      if (not wp): print()
-      if (not wp): print("---------------")
-      if (not wp): print("Notes:")
-      if (not wp): print("  UDS value is calculated based on the deposit capture price, not the current Dash price.")
-      if (not wp): print()
-      if (not wp): print("FILE                      - "
-                                  + dirname(abspath(__file__))
-                                  + "/" + src_file)
-      if (not wp): print("PAYWALL_TOTAL_DASH        - " + str(format(round(PAYWALL_TOTAL_DASH,4), '.4f')))
-      if (not wp): print("PAYWALL_TOTAL_US          - " + str(format(round(PAYWALL_TOTAL_US,2), '.2f')))
-      if (not wp): print()
-      if (not wp): print("Completed without error at : " + str(datetime.now()))
-      if (not wp): print()
 
-      if (wp) :
-            print("<html><body><title>Paywall Report</title><small><a href=\"")
-            print("https://" + str(os.environ["HTTP_HOST"]) + str(os.environ["SCRIPT_NAME"]))
-            print("\" target=\"_blank\" rel=\"noopener\">Current Paywall Totals</a>: <br>"
-                  + str(round(PAYWALL_TOTAL_DASH,3)) + " Dash; "
-                  + str(round(PAYWALL_TOTAL_US,2)) + " USD </small></body></html>") 
+      if (wp):
+            do_wp_output(candidates,debug)
+      elif (qtr_report):
+            do_qtr_output(candidates,completed_quarter,completed_quarter_curr,src_file,debug)
+      else:
+            do_html_output(candidates,src_file,debug)
+            
+
             
 if __name__ == "__main__":
-      # def paywall_output(json_directory, json_file, debug):
       try:
             if(len(sys.argv) == 4):
-                  paywall_output(sys.argv[1],sys.argv[2],sys.argv[3])
+                  report_output(sys.argv[1],sys.argv[2],sys.argv[3])
             else:
-                  paywall_output(WEB_JSON_DIR,WEB_JSON_FILE,WEB_DEBUG)
+                  report_output(WEB_JSON_DIR,WEB_JSON_FILE,WEB_DEBUG)
                   
       except Exception as e:
             print("Exception: ",e)
