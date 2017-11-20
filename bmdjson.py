@@ -23,10 +23,8 @@ from subprocess import Popen, PIPE, STDOUT, call, check_output
 check_addr_url = "https://explorer.dash.org/chain/Dash/q/checkaddress/"
 check_addr_resp_errs = ['X5', 'SZ', 'CK']
 
-def completed_quarter(dt):
-    prev_quarter_map = ((4, -1), (1, 0), (2, 0), (3, 0))
-    quarter, yd = prev_quarter_map[(dt.month - 1) // 3]
-    return (dt.year + yd, quarter)
+def completed_quarter(date):
+    return date.year, int(((date.month - 1) / 3 + 1))
 
 def encode(text):
     retcode, stdout = None, None
