@@ -12,7 +12,7 @@ import sys
 from copy import copy
 from datetime import datetime, timedelta, time
 from random import randint
-from bmdjson import completed_quarter, get_sha512_32_hash, decode
+from bmdjson import completed_quarter, get_sha512_32_hash, decode, get_dash_price, get_dash_chain_totals
 
 ############################################################################
 # File: paywall.py
@@ -36,7 +36,8 @@ WEB_JSON_DIR = "."
 WEB_JSON_FILE = "default.json"
 WEB_PAYMENT_COUNT_MAX = 104
 WEB_PAYMENT_NEXT_WEEK = "Sun" 
-WEB_PAYMENT_DEPOSIT_LIMIT = 0.14  # 40÷284.31 usd
+WEB_PAYMENT_NEXT_WEEK_PRICE = 100.00
+WEB_PAYMENT_DEPOSIT_LIMIT = 0.4  # 40÷100 usd
 WEB_PAYMENT_COUNT_CURRENT = 0
 WEB_PAYMENT_IS_NEW_WEEK = "no"
 WEB_DEBUG = "false"
@@ -55,26 +56,7 @@ WEB_TESTING = "no"
 now_weekday = datetime.today().weekday()
 epoch_weekdays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun','Mon']
     
-#########
-# This defines the blockchain explorer that will be use to fetch the balance by the address.
-# Funds have to be moved by the address owner, if you expect subsiquent deposits based on pmt_freq_ms
-
-# the JSON file address will be concatinated on the end
-# API Key (mydashdirect@gmail.com): cf3003ed342d
-EXPLORER_RECEIVED_BY_URL = "https://chainz.cryptoid.info/dash/api.dws?q=multiaddr&n=0&key=cf3003ed342d&active="
-EXPLORER_HEADERS = {'user-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)'
-                                   'AppleWebKit/537.36 (KHTML, like Gecko)'
-                                   'Chrome/45.0.2454.101 Safari/537.36'),
-                    'referer': 'https://explorer.dash.org/'}
-
-COINMARKET_PRICE_URL = "https://api.coinmarketcap.com/v1/ticker/dash/?convert=USD"
-COINMARKET_HEADERS = {'user-agent': ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)'
-                                   'AppleWebKit/537.36 (KHTML, like Gecko)'
-                                   'Chrome/45.0.2454.101 Safari/537.36'),
-                    'referer': 'https://coinmarketcap.com/'}
-
 QR_URL = "https://chart.googleapis.com/chart?chs=120x120&cht=qr&chl="
-
 #########
 
 def hrs_until_midnight():
@@ -85,41 +67,6 @@ def hrs_until_midnight():
 
 def str2bool(v):
       return v.lower() in ("yes", "true", "t", "1")
-
-def get_dash_price(debug):
-      price = 0.0
-      r = requests.get(COINMARKET_PRICE_URL,COINMARKET_HEADERS)
-      if (r.status_code == requests.codes.ok):
-            data = json.loads(r.text)
-            if (debug): print(json.dumps(data, sort_keys=True, indent=8))
-            price = float(str(data[0]["price_usd"]))
-            if (debug): print("price = " + str(price))
-      else:
-            if (debug): print("Address check at " + COINMARKET_PRICE_URL + " status failed ["
-                  + str(r.status_code) + "].  -> "
-                  + str(r.raise_for_status()))
-      return price
-
-def get_dash_total_received(payee_keys,candidates,debug):
-      big_url = EXPLORER_RECEIVED_BY_URL
-      for key in payee_keys:
-            payee = candidates[key]
-            big_url = big_url + decode(payee["address_signature"]) + "|"
-      if (debug): print("big_url = " + str(big_url))
-      r = requests.get(big_url,EXPLORER_HEADERS)
-      if (r.status_code == requests.codes.ok):
-            data = json.loads(r.text)
-            for addrs in data["addresses"]:
-                  key = get_sha512_32_hash(addrs["address"])
-                  payee = candidates[key]
-                  payee["total_received"] = float(str(addrs["total_received"] * .00000001))
-                  if (debug): print("\nAfter Total Received " + str(addrs["total_received"]) + " added : " + json.dumps(payee, sort_keys=True, indent=8))
-            if (debug): print("candidates : " + json.dumps(candidates, sort_keys=True, indent=8))
-      else:
-            if (debug): print("Address check at " + big_url + "status failed ["
-                  + str(r.status_code) + "].  -> "
-                  + str(r.raise_for_status()))
-      return candidates
 
 def get_payee_keys(candidates,payment_count_current, payment_count_max,payment_deposit_limit,debug):
       payee_keys = []
@@ -192,7 +139,7 @@ def do_wp_out(payee_out, settings, current_payment_deposit_limit):
                   + "<p> Click <a href=\"http://give.dashdirect.io\" target=\"_blank\" rel=\"noopener\">give.dashdirect.io</a>"
                   + " for other paywall locations. Have a wonderful day and come back soon! We appreciate you. </body></html>")
 
-def do_text_out(payee_out, settings, current_payment_deposit_limit, PAYMENT_COUNT_CURRENT, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE):
+def do_text_out(payee_out, settings, current_payment_deposit_limit,current_payment_deposit_limit_usd, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE):
       print("Content-Type: text/plain\n")
       print()        
       print("----------  Updating balances of those still in need. --------------------")
@@ -215,16 +162,18 @@ def do_text_out(payee_out, settings, current_payment_deposit_limit, PAYMENT_COUN
       print("--------------------------------------------------------------------------")
       print()
       print("Notes:")
-      print(" Addresses above are wait for payments in payment count ["+ str(PAYMENT_COUNT_CURRENT) + "]")
-      print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts [" + str(PAYMENT_NEW_WEEK) + "]")
-      print(" [" + str(round(hrs_until_midnight(),2)) + "] hours till next day [" + str(epoch_weekdays[now_weekday +1]) + "]")
-      print(" Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
+      print(" Addresses should not exceed [" + str(round(current_payment_deposit_limit,4)) + "] Dash; paywall requesting USD payments of ["
+            + str(round(current_payment_deposit_limit_usd,2))
+            + "] at payment count ["+ str(PAYMENT_COUNT_CURRENT) + " of " + str(PAYMENT_COUNT_MAX) + "]")
+      print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts [" + str(PAYMENT_NEW_WEEK) + "]; "
+            + "[" + str(round(hrs_until_midnight(),2)) + "] hours until the next day [" + str(epoch_weekdays[now_weekday +1]) + "]")
       print()
       print()
-      print("Completed without error at : " + str(datetime.now()))
+      print("Completed without error at : " + str(datetime.now())
+            + "; Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
       print()
 
-def paywall_output(json_directory, json_file, payment_count_max, payment_new_week,
+def paywall_output(json_directory, json_file, payment_count_max, payment_new_week, payment_new_week_price, 
                    payment_deposit_limit, payment_count_current, debug, testing):
       try:
             json_dir = json_directory
@@ -268,6 +217,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                                     + ") JSON file.")
                   PAYMENT_COUNT_MAX = int(db["settings"][0]["payment_count_max"])
                   PAYMENT_NEW_WEEK = str(db["settings"][0]["payment_new_week"])
+                  PAYMENT_NEW_WEEK_PRICE = db["settings"][0]["payment_new_week_price"]
                   PAYMENT_DEPOSIT_LIMIT = float(db["settings"][0]["payment_deposit_limit"])
                   PAYMENT_COUNT_CURRENT = int(db["settings"][0]["payment_count_current"])
                   PAYMENT_IS_NEW_WEEK = str2bool(str(db["settings"][0]["payment_is_new_week"]))
@@ -277,6 +227,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                                     + "running with paywall default values found below.\n")
                   PAYMENT_COUNT_MAX = WEB_PAYMENT_COUNT_MAX
                   PAYMENT_NEW_WEEK = str(WEB_PAYMENT_NEXT_WEEK)
+                  PAYMENT_NEW_WEEK_PRICE = WEB_PAYMENT_NEXT_WEEK_PRICE
                   PAYMENT_DEPOSIT_LIMIT = WEB_PAYMENT_DEPOSIT_LIMIT
                   PAYMENT_COUNT_CURRENT = WEB_PAYMENT_COUNT_CURRENT
                   PAYMENT_IS_NEW_WEEK = str2bool(str(WEB_PAYMENT_IS_NEW_WEEK))
@@ -300,9 +251,12 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
       # process addresses here: only get payees who still need funds to check http balance
       #########
       COINMARKET_DASH_PRICE = get_dash_price(debug)
+      current_payment_deposit_limit_usd = round(PAYMENT_DEPOSIT_LIMIT*PAYMENT_NEW_WEEK_PRICE,6)
       check_all_candidates = False
+
       if (debug): print("PAYMENT_IS_NEW_WEEK = " + str(PAYMENT_IS_NEW_WEEK))
       if (debug): print("PAYMENT_NEW_WEEK = " + str(PAYMENT_NEW_WEEK))
+      if (debug): print("PAYMENT_NEW_WEEK_PRICE = " + str(PAYMENT_NEW_WEEK_PRICE))
       if (debug): print("epoch_weekdays[now_weekday] = " + str(epoch_weekdays[now_weekday]))
       if (debug): print("PAYMENT_COUNT_CURRENT) + 1 = " + str(int(PAYMENT_COUNT_CURRENT) + 1))
       if (debug): print("PAYMENT_COUNT_MAX = " + str(int(PAYMENT_COUNT_MAX)))
@@ -315,11 +269,17 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
       if (PAYMENT_NEW_WEEK.lower() == "off") :
             PAYMENT_COUNT_MAX = 1
             PAYMENT_COUNT_CURRENT = 1
+            # Adjust deposit amount based on price change... Frequency???
+            PAYMENT_DEPOSIT_LIMIT  = round(current_payment_deposit_limit_usd/COINMARKET_DASH_PRICE,6)
+            PAYMENT_NEW_WEEK_PRICE  = COINMARKET_DASH_PRICE
             PAYMENT_IS_NEW_WEEK = False            
       else : 
             if (not PAYMENT_IS_NEW_WEEK and epoch_weekdays[now_weekday] == PAYMENT_NEW_WEEK  
                       and (int(PAYMENT_COUNT_CURRENT) + 1) <= int(PAYMENT_COUNT_MAX)) :
+                  # NEW PAY COUNT and Adjust deposit amount based on price change
                   PAYMENT_COUNT_CURRENT = PAYMENT_COUNT_CURRENT + 1
+                  PAYMENT_DEPOSIT_LIMIT  = round(current_payment_deposit_limit_usd/COINMARKET_DASH_PRICE,6)
+                  PAYMENT_NEW_WEEK_PRICE  = COINMARKET_DASH_PRICE
                   PAYMENT_IS_NEW_WEEK = True
                   check_all_candidates = True
             if (epoch_weekdays[now_weekday] != PAYMENT_NEW_WEEK) :
@@ -343,12 +303,14 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             if (debug):
                   print("PAYMENT_COUNT_CURRENT > PAYMENT_COUNT_MAX (" + str(PAYMENT_COUNT_CURRENT) + " > " + str(PAYMENT_COUNT_MAX) + ")")
                   print("PAYMENT_COUNT_CURRENT " + str(PAYMENT_COUNT_CURRENT))
-            candidates = get_dash_total_received(payee_keys,db["pay_to"],debug)
+            candidates = get_dash_chain_totals(payee_keys,db["pay_to"],debug)
             yr,qtr = completed_quarter(datetime.today())
             for payee in candidates.values():
                   if (debug): print("payee : " + json.dumps(payee, sort_keys=True, indent=8))
                   if (payee["active"]):
                         payee.setdefault("total_received", 0.0)
+                        payee.setdefault("total_sent", 0.0)
+                        payee.setdefault("final_balance", 0.0)                                    
                         address_balance = float(payee["total_received"])
                         if (address_balance > payee["address_balance"]):
                               # add new delta transactions to the json file
@@ -373,6 +335,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             db['settings'] = [{'_comment':"payment_new_week options: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat','OFF']",
                                'payment_count_max':PAYMENT_COUNT_MAX,
                                'payment_new_week':PAYMENT_NEW_WEEK,
+                               'payment_new_week_price':PAYMENT_NEW_WEEK_PRICE,
                                'payment_deposit_limit':PAYMENT_DEPOSIT_LIMIT,
                                'payment_count_current':PAYMENT_COUNT_CURRENT,
                                'payment_is_new_week': PAYMENT_IS_NEW_WEEK,
@@ -391,7 +354,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
       elif (wp):
             do_wp_out(payee_out, db['settings'], current_payment_deposit_limit)
       else:
-            do_text_out(payee_out, db['settings'], current_payment_deposit_limit,PAYMENT_COUNT_CURRENT, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE)
+            do_text_out(payee_out, db['settings'], current_payment_deposit_limit,current_payment_deposit_limit_usd, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE)
             if (debug) :
                   print("FILE                       - " + src_file)
                   print("EXPLORER_RECEIVED_BY_URL   - " + EXPLORER_RECEIVED_BY_URL)
@@ -402,15 +365,15 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                   print("PAYMENT_IS_NEW_WEEK        - " + str(PAYMENT_IS_NEW_WEEK))
             
 if __name__ == "__main__":
-      # def paywall_output(json_directory, json_file, payment_count_max, payment_new_week,
+      # def paywall_output(json_directory, json_file, payment_count_max, payment_new_week, payment_new_week_price,
       #               payment_deposit_limit, payment_count_current, debug, testing):
       try:
-            if(len(sys.argv) == 9):
+            if(len(sys.argv) == 10):
                   paywall_output(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],
-                                 sys.argv[6],sys.argv[7],sys.argv[8])
+                                 sys.argv[6],sys.argv[7],sys.argv[8],sys.argv[9])
             else:
                   paywall_output(WEB_JSON_DIR,WEB_JSON_FILE, WEB_PAYMENT_COUNT_MAX,
-                                 WEB_PAYMENT_NEXT_WEEK, WEB_PAYMENT_DEPOSIT_LIMIT,
+                                 WEB_PAYMENT_NEXT_WEEK,WEB_PAYMENT_NEXT_WEEK_PRICE, WEB_PAYMENT_DEPOSIT_LIMIT,
                                  WEB_PAYMENT_COUNT_CURRENT, WEB_DEBUG,
                                  WEB_TESTING)
                   
