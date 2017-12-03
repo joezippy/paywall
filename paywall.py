@@ -175,6 +175,83 @@ def do_text_out(payee_out, settings, current_payment_deposit_limit,current_payme
             + "; Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
       print()
 
+def do_sendtoaddress_out(payee_out, settings, current_payment_deposit_limit,current_payment_deposit_limit_usd, total_address_count, bic_amount, bic_instant_send,
+                         bic_private_send, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE):
+      print("Content-Type: text/html\n")
+      print("<html><head><title>BIC - Paywall Output</title></head><body><pre><b><font color='red'>")
+      print("---------------------------------------------------------------------")
+      print("**** WARNING USE AT YOUR OWN RISK, THIS IS BETA SOFTWARE! ****")
+      print()
+      print("DASHDIRECT IS NOT LIABLE IN ANYWAY FOR TRANSACTIONS YOU")
+      print("SEND FROM THE GENERATED COMMAND(S) BELOW.")
+      print()
+      print("YOU HAVE BEEN WARNED!")
+      print("---------------------------------------------------------------------")
+      print("</font></b></pre><br>")
+      print("Welcome to the Basic Income Cannon (BIC) for [<i>https://" + str(os.environ["HTTP_HOST"]) + str(os.environ["SCRIPT_NAME"]) + "</i>]<p>")
+      print("You will need to have the Dash Core <a href=\"https://www.dash.org/wallets/\">Desktop</a> Wallet installed, up-to-date and the "
+            + " 'Tools Window' -> 'Console' tab open.<br>")
+      print("Once you have manually checked <i><b>all</b></i> generated transactions; copy and paste them into the console which will cause them to send without warning.<p>")
+      print()
+      print("DashDirect appreciates donations through all its secure interfaces regardless of the size.<br>")
+      print("Thank you for helping us end extreme poverty. :) <p>")
+      print()
+      # sendtoaddress "Xx83jyy15xg5jzVyV466xayx6W2qZa99PL" 0.0001 "Donation" "DashDirect" false false false
+      # TODO paywall.py?BIC=yes&AMOUNT=.01&INSTANT-SEND=yes&PRIVATE-SEND=yes
+      overload_amount = False if not (bic_amount) else True
+      bic_error = False
+      bic_amount_msg = " [Looks great, Thanks!]"
+      
+      if (overload_amount):
+            bic_amount = float(bic_amount)
+            bic_amount_max = 1000000.0
+            for payee in payee_out:
+                  address = payee["address_signature"]
+                  if (round(current_payment_deposit_limit - payee["address_balance"],4) < bic_amount_max) :
+                        bic_amount_max = round(current_payment_deposit_limit - payee["address_balance"],4)
+            
+            bic_error = bic_amount > bic_amount_max
+            bic_amount_msg = str(bic_amount) + bic_amount_msg if not bic_error else str(bic_amount) + " [<font color='red'>ERROR: This amount is too large; please lower and try again.</font>]"
+      else :
+            bic_amount_msg = "Top-Up" + bic_amount_msg
+
+      print("<b>Statement of work:</b>  It looks like you want to 'overload the Top Up amount' ["  + str(overload_amount).lower() + "]; with 'instant send' [" +
+            str(bic_instant_send) + "]; and 'private send' [" + bic_private_send + "]; <br>" +  bic_amount_msg)      
+      print("<p>")
+      print("------------------        START COPY     ----------------------------<br><pre>")
+      if (len(payee_out) > 0 and not bic_error):
+            for payee in payee_out:
+                  address = decode(payee["address_signature"])
+                  if (len(address) > 0) :
+                        bic_amount_out = round(current_payment_deposit_limit - payee["address_balance"],4)
+                        if (overload_amount):
+                              bic_amount_out = bic_amount
+                        print("sendtoaddress \"" + str(address) + "\" " + str(format(bic_amount_out, '.4f'))
+                              + " \"Donation\" \"DashDirect\" false " + bic_instant_send + " " + bic_private_send)
+                  else:
+                        print("Address presented " + payee["address"] + " is: Bad")
+      else:
+            print("")
+      print("</pre>------------------        END COPY       ----------------------------<p>")
+      print()
+      print("Usage: <i>sendtoaddress</i><br><pre>")
+      print("      <small><i>sendtoaddress \"Xx83jyy15xg5jzVyV466xayx6W2qZa99PL\" 0.0001 (wallet category) (trans desc) (deduct trans fees from amount) (use instant send) (use private send)</i></small></pre>")
+      print()
+      print()      
+      print("<p>Notes:<br><pre>")
+      print("  Showing [" + str(len(payee_out)) + " of " + str(total_address_count) + "] addresses that should not exceed ["
+            + str(round(current_payment_deposit_limit,4)) + "] Dash.")
+      print("  Paywall requesting USD payments of ["
+            + str(round(current_payment_deposit_limit_usd,2))
+            + "] at payment count ["+ str(PAYMENT_COUNT_CURRENT) + " of " + str(PAYMENT_COUNT_MAX) + "]")
+      print("  Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts [" + str(PAYMENT_NEW_WEEK) + "]; "
+            + "[" + str(round(hrs_until_midnight(),2)) + "] hours until the next day [" + str(epoch_weekdays[now_weekday +1]) + "]")
+      print()
+      print()
+      print("</pre><br>Completed without error at : " + str(datetime.now())
+            + "; Current Dash price in USD [" + str("%.2f" % COINMARKET_DASH_PRICE) + "]")
+      print("</body></html>")
+
 def paywall_output(json_directory, json_file, payment_count_max, payment_new_week, payment_new_week_price, 
                    payment_deposit_limit, payment_count_current, debug, testing):
       try:
@@ -192,6 +269,18 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             else:
                   wp = str2bool(form.getvalue("WP"))
                   
+            if (debug): print(str(form.getvalue("BIC")))
+            if (form.getvalue("BIC") is None):
+                  bic = False
+            else:
+                  bic = str2bool(form.getvalue("BIC"))
+
+            bic_amount = "" if not form.getvalue("AMOUNT") else form.getvalue("AMOUNT")
+            bic_instant_send = "" if not form.getvalue("INSTANT-SEND") else form.getvalue("INSTANT-SEND")
+            bic_instant_send = str(str2bool(bic_instant_send)).lower()
+            bic_private_send = "" if not form.getvalue("PRIVATE-SEND") else form.getvalue("PRIVATE-SEND")            
+            bic_private_send = str(str2bool(bic_private_send)).lower()
+            
             if (debug): print(str(form.getvalue("APP")))
             if (form.getvalue("APP") is None):
                   app = False
@@ -271,7 +360,6 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
       if (PAYMENT_NEW_WEEK.lower() == "off") :
             PAYMENT_COUNT_MAX = 1
             PAYMENT_COUNT_CURRENT = 1
-            # Adjust deposit amount based on price change... Frequency???
             PAYMENT_DEPOSIT_LIMIT  = round(current_payment_deposit_limit_usd/COINMARKET_DASH_PRICE,6)
             PAYMENT_NEW_WEEK_PRICE  = COINMARKET_DASH_PRICE
             PAYMENT_IS_NEW_WEEK = False            
@@ -355,6 +443,9 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             do_app_out(payee_out, db['settings'], current_payment_deposit_limit)
       elif (wp):
             do_wp_out(payee_out, db['settings'], current_payment_deposit_limit)
+      elif (bic):
+            do_sendtoaddress_out(payee_out, db['settings'], current_payment_deposit_limit,current_payment_deposit_limit_usd, len(db["pay_to"]), bic_amount, bic_instant_send,
+                         bic_private_send, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE)            
       else:
             do_text_out(payee_out, db['settings'], current_payment_deposit_limit,current_payment_deposit_limit_usd, len(db["pay_to"]), PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE)
             if (debug) :
