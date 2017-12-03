@@ -139,7 +139,7 @@ def do_wp_out(payee_out, settings, current_payment_deposit_limit):
                   + "<p> Click <a href=\"http://give.dashdirect.io\" target=\"_blank\" rel=\"noopener\">give.dashdirect.io</a>"
                   + " for other paywall locations. Have a wonderful day and come back soon! We appreciate you. </body></html>")
 
-def do_text_out(payee_out, settings, current_payment_deposit_limit,current_payment_deposit_limit_usd, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE):
+def do_text_out(payee_out, settings, current_payment_deposit_limit,current_payment_deposit_limit_usd, total_address_count, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE):
       print("Content-Type: text/plain\n")
       print()        
       print("----------  Updating balances of those still in need. --------------------")
@@ -162,10 +162,12 @@ def do_text_out(payee_out, settings, current_payment_deposit_limit,current_payme
       print("--------------------------------------------------------------------------")
       print()
       print("Notes:")
-      print(" Addresses should not exceed [" + str(round(current_payment_deposit_limit,4)) + "] Dash; paywall requesting USD payments of ["
+      print("  Showing [" + str(len(payee_out)) + " of " + str(total_address_count) + "] addresses that should not exceed ["
+            + str(round(current_payment_deposit_limit,4)) + "] Dash.")
+      print("  Paywall requesting USD payments of ["
             + str(round(current_payment_deposit_limit_usd,2))
             + "] at payment count ["+ str(PAYMENT_COUNT_CURRENT) + " of " + str(PAYMENT_COUNT_MAX) + "]")
-      print(" Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts [" + str(PAYMENT_NEW_WEEK) + "]; "
+      print("  Today is [" + str(epoch_weekdays[now_weekday]) + "] the new week starts [" + str(PAYMENT_NEW_WEEK) + "]; "
             + "[" + str(round(hrs_until_midnight(),2)) + "] hours until the next day [" + str(epoch_weekdays[now_weekday +1]) + "]")
       print()
       print()
@@ -354,7 +356,7 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
       elif (wp):
             do_wp_out(payee_out, db['settings'], current_payment_deposit_limit)
       else:
-            do_text_out(payee_out, db['settings'], current_payment_deposit_limit,current_payment_deposit_limit_usd, PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE)
+            do_text_out(payee_out, db['settings'], current_payment_deposit_limit,current_payment_deposit_limit_usd, len(db["pay_to"]), PAYMENT_COUNT_CURRENT, PAYMENT_COUNT_MAX, PAYMENT_NEW_WEEK, COINMARKET_DASH_PRICE)
             if (debug) :
                   print("FILE                       - " + src_file)
                   print("EXPLORER_RECEIVED_BY_URL   - " + EXPLORER_RECEIVED_BY_URL)
