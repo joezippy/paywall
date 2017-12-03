@@ -204,10 +204,10 @@ def do_sendtoaddress_out(payee_out, settings, current_payment_deposit_limit,curr
       
       if (overload_amount):
             bic_amount = float(bic_amount)
-            bic_amount_max = 1000000.0
+            bic_amount_max = 0.0
             for payee in payee_out:
                   address = payee["address_signature"]
-                  if (round(current_payment_deposit_limit - payee["address_balance"],4) < bic_amount_max) :
+                  if (round(current_payment_deposit_limit - payee["address_balance"],4) > bic_amount_max) :
                         bic_amount_max = round(current_payment_deposit_limit - payee["address_balance"],4)
             
             bic_error = bic_amount > bic_amount_max
