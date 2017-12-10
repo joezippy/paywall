@@ -372,8 +372,8 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                   PAYMENT_NEW_WEEK_PRICE  = COINMARKET_DASH_PRICE
                   PAYMENT_IS_NEW_WEEK = True
                   check_all_candidates = True
-            if (epoch_weekdays[now_weekday] != PAYMENT_NEW_WEEK) :
-                  PAYMENT_IS_NEW_WEEK = False
+      if (epoch_weekdays[now_weekday] != PAYMENT_NEW_WEEK) :
+            PAYMENT_IS_NEW_WEEK = False
 
       candidates = db["pay_to"]
       if (check_all_candidates) :
