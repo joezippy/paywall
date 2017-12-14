@@ -416,8 +416,8 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
                               payee["address_balance"] = address_balance
 
                               if (debug) : print("\nAfter payments added: "+  json.dumps(payee, sort_keys=True, indent=8))
-                  if (payee["address_balance"] < current_payment_deposit_limit):
-                        payee_out.append(payee)
+                        if (payee["address_balance"] < current_payment_deposit_limit):
+                              payee_out.append(payee)
             if (PAYMENT_COUNT_CURRENT >= PAYMENT_COUNT_MAX) :
                   PAYMENT_COUNT_CURRENT = PAYMENT_COUNT_MAX
 
