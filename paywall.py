@@ -195,7 +195,11 @@ def do_sendtoaddress_out(payee_out, settings, current_payment_deposit_limit,curr
       print()
       print("DashDirect appreciates donations through all its secure interfaces regardless of the size.<br>")
       print("Thank you for helping us end extreme poverty. :) <p>")
-      print()
+      print("<p>")
+      print("The BIC can take the follow arguments, as an example:<br><i>paywall.py?BIC=yes&AMOUNT=.006&INSTANT-SEND=no&PRIVATE-SEND=yes </i><p>")
+      print() 
+
+      # sendmany "listaccounts" "{\"XcwNAGNBpzMc3vE5atHY9yyUknjaRujp9C\":0.0001,\"XsYUTSfQtBzP1y4V5QyMk4DUF6fSq9oRyi\":0.0002}" 1 false "Test 2 - Trans" [] false false'
       # sendtoaddress "Xx83jyy15xg5jzVyV466xayx6W2qZa99PL" 0.0001 "Donation" "DashDirect" false false false
       # TODO paywall.py?BIC=yes&AMOUNT=.01&INSTANT-SEND=yes&PRIVATE-SEND=yes
       overload_amount = False if not (bic_amount) else True
@@ -219,23 +223,26 @@ def do_sendtoaddress_out(payee_out, settings, current_payment_deposit_limit,curr
             str(bic_instant_send) + "]; and 'private send' [" + bic_private_send + "]; <br>" +  bic_amount_msg)      
       print("<p>")
       print("------------------        START COPY     ----------------------------<br><pre>")
+      my_out = "sendmany \"account_name\" \"{"
       if (len(payee_out) > 0 and not bic_error):
             for payee in payee_out:
                   address = decode(payee["address_signature"])
-                  if (len(address) > 0) :
+                  if (len(address) > 0):
                         bic_amount_out = round(current_payment_deposit_limit - payee["address_balance"],4)
                         if (overload_amount):
                               bic_amount_out = bic_amount
-                        print("sendtoaddress \"" + str(address) + "\" " + str(format(bic_amount_out, '.4f'))
-                              + " \"Donation\" \"DashDirect\" false " + bic_instant_send + " " + bic_private_send)
+                        my_out = my_out + "\\\"" + str(address) + "\\\":" + str(format(bic_amount_out, '.4f')) + ","
                   else:
                         print("Address presented " + payee["address"] + " is: Bad")
+                        return
       else:
             print("")
+      my_out = my_out.rstrip(',') + "}\" 1 false \"Donation, DashDirect\" [] " + bic_instant_send + " " + bic_private_send
+      print(my_out)
       print("</pre>------------------        END COPY       ----------------------------<p>")
       print()
       print("Usage: <i>sendtoaddress</i><br><pre>")
-      print("      <small><i>sendtoaddress \"Xx83jyy15xg5jzVyV466xayx6W2qZa99PL\" 0.0001 (wallet category) (trans desc) (deduct trans fees from amount) (use instant send) (use private send)</i></small></pre>")
+      print("      <small><i>sendmany \"listaccounts\" \"{\\\"XcwNAGNBpzMc3vE5atHY9yyUknjaRujp9C\\\":0.0001,\\\"XsYUTSfQtBzP1y4V5QyMk4DUF6fSq9oRyi\\\":0.0002}\" 1 false (trans desc) [address to pay fees] (use instant send) (use private send)</i></small></pre>")
       print()
       print()      
       print("<p>Notes:<br><pre>")
@@ -421,17 +428,17 @@ def paywall_output(json_directory, json_file, payment_count_max, payment_new_wee
             if (PAYMENT_COUNT_CURRENT >= PAYMENT_COUNT_MAX) :
                   PAYMENT_COUNT_CURRENT = PAYMENT_COUNT_MAX
 
-            db["pay_to"] = candidates
-            db['settings'] = [{'_comment':"payment_new_week options: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat','OFF']",
-                               'payment_count_max':PAYMENT_COUNT_MAX,
-                               'payment_new_week':PAYMENT_NEW_WEEK,
-                               'payment_new_week_price':PAYMENT_NEW_WEEK_PRICE,
-                               'payment_deposit_limit':PAYMENT_DEPOSIT_LIMIT,
-                               'payment_count_current':PAYMENT_COUNT_CURRENT,
-                               'payment_is_new_week': PAYMENT_IS_NEW_WEEK,
-                               "debug": debug
-            }]
-            if (debug) : print("\ndb : "+  json.dumps(db, sort_keys=True, indent=8))
+      db["pay_to"] = candidates
+      db['settings'] = [{'_comment':"payment_new_week options: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat','OFF']",
+                         'payment_count_max':PAYMENT_COUNT_MAX,
+                         'payment_new_week':PAYMENT_NEW_WEEK,
+                         'payment_new_week_price':PAYMENT_NEW_WEEK_PRICE,
+                         'payment_deposit_limit':PAYMENT_DEPOSIT_LIMIT,
+                         'payment_count_current':PAYMENT_COUNT_CURRENT,
+                         'payment_is_new_week': PAYMENT_IS_NEW_WEEK,
+                         "debug": debug
+      }]
+      if (debug) : print("\ndb : "+  json.dumps(db, sort_keys=True, indent=8))
 
       #########
       # write changes back down
